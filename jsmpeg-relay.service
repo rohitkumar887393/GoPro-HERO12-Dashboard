@@ -1,0 +1,14 @@
+[Unit]
+Description=JSMpeg WebSocket Relay
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/jsmpeg
+ExecStart=/usr/bin/node /home/pi/jsmpeg/websocket-relay.js supersecret 8082 10000
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
