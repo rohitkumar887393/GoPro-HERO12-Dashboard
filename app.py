@@ -3,11 +3,10 @@ import requests
 import threading
 import time
 from flask import send_file, redirect, Response
-
+import subprocess
 import requests
 import os
 import time
-import subprocess
 
 import RPi.GPIO as GPIO
 
@@ -58,8 +57,6 @@ HTML = '''
 <head>
 <title>GoPro Hero12 Control</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<script src="https://cdn.jsdelivr.net/gh/phoboslab/jsmpeg@master/jsmpeg.min.js"></script>
 
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -131,13 +128,29 @@ select { width: 100%; padding: 10px; background: #0d0d1a; color: #eee; border: 1
 
 <h2>📺 Live Preview</h2>
 
-<canvas
+
+
+<div
     id="preview"
     style="
         width:100%;
+        height:400px;
         border-radius:8px;
         background:black;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:white;
+        font-size:20px;
     ">
+    Preview running on Windows VLC
+    <br>
+    udp://@:8554
+</div>
+
+
+
+
 
 
 
@@ -535,7 +548,7 @@ async function refreshState() {
     const s = d.status;
     const sets = d.settings;
     const isRec = s['8'] === 1;
-    
+
 // Battery
     document.getElementById('i-bat').textContent = s['70'] + '%';
 
@@ -592,16 +605,6 @@ async function refreshState() {
 
 
 
-new JSMpeg.Player(
-    'ws://' + window.location.hostname + ':10000',
-    {
-        canvas: document.getElementById('preview'),
-        autoplay: true,
-        audio: false
-    }
-);
-
-
 
 // Auto refresh every 5 seconds
 refreshState();
@@ -628,44 +631,38 @@ def camera_on():
 
     GPIO.output(CAMERA_POWER_PIN, GPIO.HIGH)
 
-    time.sleep(5)
+    time.sleep(3)
 
     try:
         requests.get(
             "http://172.24.103.51:8080/gopro/camera/control/wired_usb?p=1",
-            timeout=3
+            timeout=2
         )
 
         time.sleep(2)
 
         requests.post(
             "http://172.24.103.51:8080/gopro/camera/stream/start",
-            timeout=3
+            timeout=2
         )
 
         time.sleep(3)
 
 
+
+        # Kill old relay
         subprocess.call(
-            "pkill -f 'ffmpeg.*udp://@:8554'", shell=True)
-
-
-        subprocess.Popen(
-            """
-            ffmpeg \
-            -analyzeduration 10000000 \
-            -probesize 10000000 \
-            -i udp://@:8554 \
-            -vf scale=640:360 \
-            -c:v mpeg1video \
-            -b:v 1000k \
-            -r 30 \
-            -an \
-            -f mpegts \
-            http://127.0.0.1:8082/supersecret
-            """,
+            "pkill -f socat",
             shell=True
-        )
+         )
+
+        # Start UDP relay
+        subprocess.Popen(
+            "socat -u UDP4-LISTEN:8554,reuseaddr UDP4:192.168.2.7:8554",
+            shell=True
+         )
+
+
 
 
 
@@ -680,7 +677,7 @@ def camera_on():
 @app.route('/camera/off')
 def camera_off():
 
-    subprocess.call("pkill -f ffmpeg", shell=True)
+    subprocess.call("pkill -f socat", shell=True)
 
     GPIO.output(CAMERA_POWER_PIN, GPIO.LOW)
 
@@ -823,5 +820,9 @@ def media_delete():
 
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+if __name__ == "__main__":
+    print("\n==================================================")
+    print("Dashboard URL: http://192.168.2.2:5000")
+    print("==================================================\n")
+
+    app.run(host="192.168.2.2", port=5000)
