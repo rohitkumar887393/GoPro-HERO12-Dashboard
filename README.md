@@ -40,7 +40,7 @@ A Raspberry Pi based dashboard for controlling a GoPro HERO12.
 
 \- RPi.GPIO
 
-\- FFmpeg
+\- udp
 
 \- Node.js
 
