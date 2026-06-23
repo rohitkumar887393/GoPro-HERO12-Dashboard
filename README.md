@@ -52,7 +52,7 @@ A Raspberry Pi based dashboard for controlling a GoPro HERO12.
 
 ```bash
 
-cd \~/Projects/GoPro/dashboard
+cd GoPro/GoPro-HERO12-Dashboard
 
 source ../venv/bin/activate
 
